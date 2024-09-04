@@ -1,0 +1,2 @@
+client: node-2
+server: node-1
