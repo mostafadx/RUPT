@@ -4,7 +4,7 @@
 #include "client.h"
 #include "helper.h"
 
-#define NUM_OF_PAGES 512
+#define NUM_OF_PAGES 1024
 
 static atomic_int message_counter = ATOMIC_VAR_INIT(0);
 
@@ -233,18 +233,22 @@ out:
     return ret;
 }
 
-int rupt_send_message(const char * message, unsigned long size)
+int rupt_send_message(const char *message, unsigned long size)
 {
     int counter, ret = 0;
     struct ibv_send_wr wr;
     struct ibv_sge sge;
     struct ibv_wc wc;
+    int base = 150;
 
     counter = atomic_fetch_add(&message_counter, 1) + 1;
 
     /* setup work request */
     {
-        sge.addr = (uintptr_t) message;
+        if (size > 220 ){
+            message = (char *) client_cb->pinned_memory;
+        }
+        sge.addr = (uintptr_t) message;    
         sge.length = size;
         sge.lkey = client_cb->mr->lkey;
 
@@ -252,10 +256,11 @@ int rupt_send_message(const char * message, unsigned long size)
         wr.sg_list = &sge;
         wr.num_sge = 1;
         wr.opcode = IBV_WR_SEND;
-        wr.send_flags = IBV_SEND_INLINE;
+        if (size <= 220)
+            wr.send_flags = IBV_SEND_INLINE;
 
-        /* Selective Signaling */
-        if (counter%100)
+        if (counter%base == 0)
+            /* Selective Signaling */ 
             wr.send_flags |= IBV_SEND_SIGNALED;
     }
 
@@ -264,15 +269,16 @@ int rupt_send_message(const char * message, unsigned long size)
         rupt_error("ibv_post_send failed, ret=%d\n", ret);
         return ret;
     }
-    
-    /* Selective Signaling */
-    if (counter%100)
-    {    
+
+    if (counter%base == 0)
+    {
+        /* Selective Signaling */ 
         while(!ibv_poll_cq(client_cb->cq, 1, &wc));
 
         if (wc.status)
             rupt_error("ibv_poll_cq failed, wc.status: %d\n", wc.status);
     }
+
     return ret;
 }
 

@@ -3,9 +3,9 @@
 #include "server.h"
 #include "helper.h"
 
-#define MAX_RECV_SIZE 256
+#define MAX_RECV_SIZE 512
 #define MESSAGE_SIZE 64
-#define NUM_OF_PAGES 512
+#define NUM_OF_PAGES 1024
 #define NUM_SERVER_THREADS 1
 
 static void *server_thread(void *);
@@ -23,6 +23,8 @@ void * server_thread(void *data){
     while(1){
         ret = ibv_poll_cq(server_cb->cq, 1, &wc);
         if (ret){
+            if (unlikely(wc.status != IBV_WC_SUCCESS))
+                rupt_error("ibv_poll_cq failed, wc.status=%d\n", wc.status);
             process_message((char *)server_cb->pinned_memory + wc.wr_id*MESSAGE_SIZE, MESSAGE_SIZE);
 
             ret = ibv_post_recv(server_cb->qp, &server_cb->recv_wrs[wc.wr_id], NULL);
@@ -122,7 +124,7 @@ int rupt_setup_wr(void)
         server_cb->recv_wrs[i].num_sge = 1;
         server_cb->recv_wrs[i].wr_id = i;
 
-        offset = offset + (uintptr_t) MAX_RECV_SIZE; 
+        offset = offset + (uintptr_t) MESSAGE_SIZE; 
     }
 
     return 0;
@@ -174,7 +176,7 @@ static int rupt_setup_server_threads(rupt_process_message process_message){
     long t;
 
     for(t = 0; t < NUM_SERVER_THREADS; t++) {
-        ret = pthread_create(&threads[t], NULL, server_thread, (void*)process_message);
+        ret = pthread_create(&threads[t], NULL, server_thread, (void*) process_message);
         if (ret) {
             rupt_error("pthread_create failed, ret=%d\n", ret);
             goto out;

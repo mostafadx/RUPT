@@ -10,7 +10,7 @@ TEST_DIRS := $(wildcard test*)
 # Compiler and Flags
 CC := gcc
 CFLAGS := -Wall -Wextra -I$(SRC_DIR)
-LDFLAGS := -lrdmacm -libverbs -pthread
+LDFLAGS := -lrdmacm -libverbs -pthread -lssl -lcrypto
 
 # Source files
 SRC_FILES := $(SRC_DIR)/client.c $(SRC_DIR)/server.c $(SRC_DIR)/helper.c $(SRC_DIR)/rupt.c

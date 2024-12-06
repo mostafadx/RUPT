@@ -15,9 +15,8 @@ sudo apt-get install -y \
     librdmacm-dev \
     rdmacm-utils \
     numactl \
-    libnuma-dev
-
-sudo apt-get install  -y
+    libnuma-dev \
+    libssl-dev
 
 # Configure hugepages
 # Remove any memory lock limits and ensure hugepages are properly configured

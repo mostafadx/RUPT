@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #define DEBUG_LOG if (1) printf
+#define unlikely(x) __builtin_expect(!!(x), 0)
 
 typedef void (*rupt_process_message)(char *message, unsigned long length);
 
